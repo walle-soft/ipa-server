@@ -73,6 +73,9 @@
       IPA.fetch(IPA.getApiUrl('/api/upload'), {
         method: 'POST',
         body: data,
+        headers: {
+          'x-token': localStorage.getItem("token") || ""
+        }
       }, progress => {
         updateAddProgress(progress.loaded / progress.total)
       }).then(json => {

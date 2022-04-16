@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -32,7 +33,8 @@ type delParam struct {
 }
 
 type addParam struct {
-	file *pkgMultipart.FormFile
+	file  *pkgMultipart.FormFile
+	token string
 }
 
 type data interface{}
@@ -62,6 +64,12 @@ func MakeFindEndpoint(srv Service) endpoint.Endpoint {
 func MakeAddEndpoint(srv Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		p := request.(addParam)
+		if os.Getenv("IPA_SERVER_TOKEN") == "" {
+			return nil, errors.New("no password, can't add")
+		}
+		if p.token != os.Getenv("IPA_SERVER_TOKEN") {
+			return nil, errors.New("token is error, can't add")
+		}
 		buf, err := seekbuf.Open(p.file, seekbuf.FileMode)
 		if err != nil {
 			return nil, err
@@ -142,7 +150,7 @@ func DecodeAddRequest(_ context.Context, r *http.Request) (interface{}, error) {
 		return nil, err
 	}
 
-	return addParam{file: f}, nil
+	return addParam{file: f, token: r.Header.Get("x-token")}, nil
 }
 
 func DecodeDeleteRequest(_ context.Context, r *http.Request) (interface{}, error) {
