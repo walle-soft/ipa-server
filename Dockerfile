@@ -9,8 +9,14 @@ RUN cd /src && go build -ldflags '-linkmode "external" --extldflags "-static"' c
 # runtime
 FROM ineva/alpine:3.10.3
 LABEL maintainer="Steven <s@ineva.cn>"
+ENV IPA_SERVER_TOKEN=
+EXPOSE 8080
+
 WORKDIR /app
+
 COPY --from=builder /src/ipasd /app
 COPY docker-entrypoint.sh /docker-entrypoint.sh
+
 RUN chmod +x /docker-entrypoint.sh
+
 ENTRYPOINT /docker-entrypoint.sh
