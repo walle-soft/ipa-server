@@ -7,7 +7,7 @@ COPY . /src/
 RUN cd /src && go build -ldflags '-linkmode "external" --extldflags "-static"' cmd/ipasd/ipasd.go
 
 # runtime
-FROM ineva/alpine:3.10.3
+FROM alpine
 LABEL maintainer="Steven <s@ineva.cn>"
 ENV IPA_SERVER_TOKEN=
 EXPOSE 8080
