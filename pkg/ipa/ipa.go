@@ -194,6 +194,12 @@ func parseIconImage(iconFile *zip.File) (image.Image, error) {
 
 	img, err := png.Decode(buf)
 	if err != nil {
+		// png.Decode consumed part of buf, rewind before the CgBI fallback,
+		// otherwise ipaPng.Decode reads from a non-zero offset and fails with
+		// "not a PNG file", which wrongly triggers the Assets.car fallback.
+		if _, err := buf.Seek(0, io.SeekStart); err != nil {
+			return nil, err
+		}
 		// try fix to std png
 		cgbi, err := ipaPng.Decode(buf)
 		if err != nil {

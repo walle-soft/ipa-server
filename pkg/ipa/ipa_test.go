@@ -1,6 +1,8 @@
 package ipa
 
 import (
+	"archive/zip"
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -81,4 +83,44 @@ func printMemUsage() {
 
 func bToMb(b uint64) uint64 {
 	return b / 1024 / 1024
+}
+
+// TestParseCgBIIcon guards against the regression where png.Decode advances the
+// buffer and the CgBI fallback (ipaPng.Decode) is then handed a non-zero offset,
+// failing with "not a PNG file" and forcing the expensive Assets.car fallback.
+func TestParseCgBIIcon(t *testing.T) {
+	data, err := os.ReadFile("test_data/cgbi_icon.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// wrap the CgBI png in a zip so we can get a *zip.File
+	zbuf := &bytes.Buffer{}
+	zw := zip.NewWriter(zbuf)
+	w, err := zw.Create("Payload/App.app/AppIcon60x60@2x.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := w.Write(data); err != nil {
+		t.Fatal(err)
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	zr, err := zip.NewReader(bytes.NewReader(zbuf.Bytes()), int64(zbuf.Len()))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	img, err := parseIconImage(zr.File[0])
+	if err != nil {
+		t.Fatalf("parseIconImage failed on CgBI png: %v", err)
+	}
+	if img == nil {
+		t.Fatal("expected decoded icon, got nil")
+	}
+	if b := img.Bounds(); b.Dx() != 120 || b.Dy() != 120 {
+		t.Fatalf("unexpected icon bounds: %v", b)
+	}
 }
